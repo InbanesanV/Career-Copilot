@@ -27,6 +27,7 @@ const historyRouter = require("./routes/history");
 const authRouter = require("./routes/auth");
 
 const app = express();
+module.exports = app;
 const PORT = process.env.PORT || 5000;
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
