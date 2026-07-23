@@ -64,25 +64,37 @@ const authLimiter = rateLimit({
 });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGIN || "*")
-  .split(",")
-  .map((s) => s.trim());
+const allowedOrigins = [
+  "https://career-copilot-brown.vercel.app",       // your stable production frontend domain
+  "https://career-copilot-inbanesanvs-projects.vercel.app", // Vercel's project alias (backup)
+  ...(process.env.ALLOWED_ORIGIN
+    ? process.env.ALLOWED_ORIGIN.split(",").map((s) => s.trim())
+    : []),
+];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl)
-      // or if origin matches allowedOrigins or if running on localhost during dev
-      if(
-        !origin ||
-        allowedOrigins.includes("*") ||
-        allowedOrigins.includes(origin) ||
-        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS policy"));
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Allow any localhost port during local development
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
       }
+
+      // Allow any Vercel preview deployment for this project
+      // (matches career-copilot-<hash>-inbanesanvs-projects.vercel.app)
+      if (/^https:\/\/career-copilot-[a-z0-9]+-inbanesanvs-projects\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
+      callback(new Error("Not allowed by CORS policy"));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
